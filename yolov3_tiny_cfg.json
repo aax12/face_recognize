@@ -1,0 +1,64 @@
+{
+    "input_size": [
+        416,
+        416,
+        3
+    ],
+    "iou_thresh": 0.5,
+    "classes": [
+        "person",
+        "bird",
+        "cat",
+        "cow",
+        "dog",
+        "horse",
+        "sheep",
+        "aeroplane",
+        "bicycle",
+        "boat",
+        "bus",
+        "car",
+        "motorbike",
+        "train",
+        "bottle",
+        "chair",
+        "diningtable",
+        "pottedplant",
+        "sofa",
+        "tvmonitor"
+    ],
+    "anchors": [
+        [
+            [
+                23,
+                27
+            ],
+            [
+                37,
+                58
+            ],
+            [
+                81,
+                82
+            ]
+        ],
+        [
+            [
+                81,
+                82
+            ],
+            [
+                135,
+                169
+            ],
+            [
+                344,
+                319
+            ]
+        ]
+    ],
+    "anchor_scale": [
+        16,
+        32
+    ]
+}
