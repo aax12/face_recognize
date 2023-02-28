@@ -108,7 +108,6 @@ def get_batch_bboxes(anchors, scales, y):
 
     scores = np.zeros([batch, t_elem, ], np.float32)
     bboxes = np.zeros([batch, t_elem, 4], np.int32)
-    valid_bboxes = []
 
     for i in range(batch):
         start_index = 0
@@ -135,12 +134,13 @@ def get_batch_bboxes(anchors, scales, y):
             scores[i, start_index:end_index] = y_pred[..., 4].reshape([-1, ])  # [h * w * 3]
             start_index = end_index
 
-        best_mark = scores > 0.6
-        _, bbox = nms(scores[best_mark], bboxes[best_mark], 0.3)
+    bboxes = bboxes.reshape([-1, 4])
+    scores = scores.reshape([-1, ])
 
-        valid_bboxes.append(bbox)
+    best_mark = scores > 0.6
+    _, bboxes = nms(scores[best_mark], bboxes[best_mark], 0.3)
 
-    return valid_bboxes
+    return bboxes
 
 
 def get_bboxes(anchors, scales, y):

@@ -8,7 +8,7 @@ from tensorflow.keras.models import Model
 from model.face_detecter import TinyFaceDetection
 from model.mobile_net_v1 import mobilenet_v1
 from model.face_net import face_net, L2_distance
-from util.misc import get_bboxes
+from util.misc import get_bboxes, IOU
 from util.cam_detector import FaceDetector
 from tensorflow.keras.utils import Progbar
 
@@ -117,9 +117,7 @@ def main():
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    print(frame_h, frame_w)
-
-    detector = FaceDetector(config, model, None, None, (160, 160), (frame_w, frame_h))
+    detector = FaceDetector(config, model, None, None, (160, 160, 3), (frame_h, frame_w, 3))
 
     cv2.namedWindow('bboxes')
 
@@ -129,9 +127,8 @@ def main():
             detector.copy_frame(frame)
 
             for bbox in detector.get_bboxes():
-                if bbox is not None:
-                    x1, y1, x2, y2 = bbox.astype('int32')
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255))
+                x1, y1, x2, y2 = bbox
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255))
             cv2.imshow('bboxes', frame)
 
     if cap.isOpened():
