@@ -13,7 +13,9 @@ class Detector:
     def __init__(
             self,
             config: dict,
-            model: Model,
+            detector_model: Model,
+            recognize_model: Model,
+            face_vector,
             get_frames,
             frame_size,
             face_size
@@ -22,7 +24,9 @@ class Detector:
         self.input_size = config['input_size']
         self.scales = config['anchor_scale'][::-1]
         self.anchors = config['anchors'][::-1]
-        self.model = model
+        self.detector_model = detector_model
+        self.recognize_model = recognize_model
+        self.face_vector = np.array(face_vector)
         self.get_frames = get_frames
         self.face_size = face_size
 
@@ -35,6 +39,7 @@ class Detector:
 
         self.detected_faces = [[]]
         self.prev_bboxes = np.zeros([1, 4], 'int32')
+        self.distances = []
 
         self.thread_flag = True
         self.is_copy = False
@@ -53,7 +58,7 @@ class Detector:
 
             frame = self.frame
             x_input = self.resize(frame)
-            y = self.model.predict_on_batch(np.expand_dims(x_input, 0))
+            y = self.detector_model.predict_on_batch(np.expand_dims(x_input, 0))
             bboxes = get_bboxes(self.anchors, self.scales, y)
 
             if len(bboxes) > 0:
@@ -74,7 +79,22 @@ class Detector:
                 mask = np.logical_or(wh_ratio < 1.2, 1 / wh_ratio < 1.2)
 
                 self._get_faces(frame, bboxes_xy[mask])
+
             time.sleep(0.03)
+
+            self._recognizing_face()
+
+    def _recognizing_face(self):
+        tmp_distance = []
+
+        for group in self.detected_faces:
+            if len(group) == self.get_frames:
+                x_image = np.expand_dims(np.stack(group), 0)
+                distance = self.recognize_model.predict_on_batch([x_image, self.face_vector])
+                tmp_distance.extend(np.squeeze(distance, 0))
+
+        if len(tmp_distance) > 0:
+            self.distances = tmp_distance
 
     def _get_faces(self, image, bboxes):
         if len(bboxes) == 0:
@@ -111,15 +131,16 @@ class Detector:
         x1, y1, x2, y2 = bbox
         return cv2.resize(image[y1:y2, x1:x2], self.face_size)
 
-    def get_faces(self):
+    def get_data(self):
         self.is_copy = True
         faces = copy.deepcopy(self.detected_faces)
         bboxes = self.prev_bboxes.copy()
+        distance = self.distances.copy()
         self.is_copy = False
 
-        return faces, bboxes
+        return faces, bboxes, distance
 
-    def set_frame(self, frame):
+    def copy_frame(self, frame):
         self.is_copy = True
         self.frame = np.copy(frame)
         self.is_copy = False
