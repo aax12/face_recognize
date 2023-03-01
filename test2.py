@@ -8,6 +8,7 @@ from model.face_detecter import TinyFaceDetection
 from model.mobile_net_v1 import mobilenet_v1
 from model.face_net import face_net, L2_distance
 from util.face_detector import Detector
+from util.mutiple_camera import CamThread
 
 
 def main():
@@ -49,6 +50,7 @@ def main():
         (frame_w, frame_h),
         face_size[1:3]
     )
+    detector.start()
 
     cv2.namedWindow('bboxes')
 
@@ -74,13 +76,11 @@ def main():
     if cap.isOpened():
         cap.release()
 
+    detector.event.set()
+
 
 if __name__ == '__main__':
     main()
-
-
-
-
 
 
 

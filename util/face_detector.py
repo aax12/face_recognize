@@ -2,14 +2,14 @@ import cv2
 import numpy as np
 import copy
 import time
+import threading
 
-from threading import Thread
 from tensorflow.keras.models import Model
 
 from util.misc import IOU, get_bboxes, change_wh, change_xy
 
 
-class Detector:
+class Detector(threading.Thread):
     def __init__(
             self,
             config: dict,
@@ -20,6 +20,11 @@ class Detector:
             frame_size,
             face_size
     ):
+        super(Detector, self).__init__()
+
+        self.daemon = True
+        self.event = threading.Event()
+
         self.frame_size = frame_size
         self.input_size = config['input_size']
         self.scales = config['anchor_scale'][::-1]
@@ -41,18 +46,10 @@ class Detector:
         self.prev_bboxes = np.zeros([1, 4], 'int32')
         self.distances = []
 
-        self.thread_flag = True
         self.is_copy = False
 
-        self.thread = Thread(target=self._detecting_face)
-        self.thread.daemon = True
-        self.thread.start()
-
-    def __del__(self):
-        self.thread_flag = False
-
-    def _detecting_face(self):
-        while self.thread_flag:
+    def run(self):
+        while not self.event.is_set():
             if self.is_copy:
                 continue
 
@@ -85,16 +82,18 @@ class Detector:
             self._recognizing_face()
 
     def _recognizing_face(self):
-        tmp_distance = []
+        tmp_images = []
 
         for group in self.detected_faces:
             if len(group) == self.get_frames:
-                x_image = np.expand_dims(np.stack(group), 0)
-                distance = self.recognize_model.predict_on_batch([x_image, self.face_vector])
-                tmp_distance.extend(np.squeeze(distance, 0))
+                tmp_images.append(np.stack(group))
 
-        if len(tmp_distance) > 0:
-            self.distances = tmp_distance
+        if len(tmp_images) > 0:
+            x_images = np.stack(tmp_images)
+            vectors = np.tile(self.face_vector, [len(x_images), 1])
+
+            distance = self.recognize_model.predict_on_batch([x_images, vectors])
+            self.distances = np.squeeze(distance, -1)
 
     def _get_faces(self, image, bboxes):
         if len(bboxes) == 0:
